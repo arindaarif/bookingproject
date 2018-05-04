@@ -3,6 +3,8 @@ Reporting Pipeline
 
 As informed in Technical Test (Business Intelligence Data Engineer) instruction, I designed a reporting pipeline that contains booking information across GO-JEK products. The pipeline is created to produce hourly window of report with 5 minutes period. Based on json file as an input, the report will contain Total Booking information based on Service Area Name, Booking Status, and Payment Channel. 
 
+This below graph shows data pipeline flow I designed:
+
 <img src="Data Pipeline Flow.jpg" alt="Data Pipeline Flow" />
 
 The data pipeline flow above shows input file, output file, and every PTransform & type of PCollection between them. Here are the explanation & data model for each step of the pipeline.
@@ -30,7 +32,7 @@ I use BookingData class as a model. This class consisted of these fields (all in
 In this part, I applied a windowing configuration that sets hourly sliding windows with 5 minutes period.
 
 **Data Model**<br/>
-This PTransform did not generate any output differed from the input.
+The model that used in this step is still BookingData. However, the global window has been transformed into bounded windows.
 
 4 -	Mapping
 ------------
@@ -39,8 +41,7 @@ This ParDo will invoke a class that transform PCollection of BookingData into pa
 
 **Data Model**<br/>
 This PTransform generate outputs in PCollection of KV(String, Integer). The data type of Key is a string with this format: service_area_name+’, ‘+payment_type+’, ‘+status. Meanwhile, the Value is set to 1 so the next transforms will be able to easily sum the value to get the total booking. For example:
-KV(“JAKARTA, GO_PAY, COMPLETE”,1)
-
+KV(“JAKARTA,GO_PAY,COMPLETE”,1)
 
 5 -	GroupByKey
 ---------------
@@ -48,8 +49,8 @@ KV(“JAKARTA, GO_PAY, COMPLETE”,1)
 This transform will aggregate the collections with same keys, so we finally have distinct collections with unique keys and iterable values.
 
 **Data Model**<br/>
-Since the previous PCollection of pairs has been grouped by key, this PTransform will generate outputs in PCollection of KV(String, Iterable<Integer>). For example, if in 1 window we have 5 elements with key “JAKARTA, GO_PAY, COMPLETE”, then the output will be:
-KV(“JAKARTA, GO_PAY, COMPLETE”, (1,1,1,1,1))
+Since the previous PCollection of pairs has been grouped by key, this PTransform will generate outputs in PCollection of KV(String, Iterable<Integer>). For example, if in 1 window we have 5 elements with key “JAKARTA,GO_PAY,COMPLETE”, then the output will be:
+KV(“JAKARTA,GO_PAY,COMPLETE”, (1,1,1,1,1))
 
 6 -	SumUpValuesByKey
 --------------------
@@ -57,8 +58,8 @@ KV(“JAKARTA, GO_PAY, COMPLETE”, (1,1,1,1,1))
 This ParDo will invoke a class that sums up iterable values for each element to be used as total booking for each element. The output of this transform is PCollection of string that reports ‘service_area_name’, ‘payment_type’, ‘status’, and total booking count for those criteria in each window. 
 
 **Data Model**<br/>
-In this PTransform, I concat the key and the summed up value into a string for each element. For example, if in 1 window we have 5 elements with key “JAKARTA, GO_PAY, COMPLETE”, then the output will be:
-“JAKARTA, GO_PAY, COMPLETE, 5”
+In this PTransform, I concat the key and the summed up value into a string for each element. For example, if in 1 window we have 5 elements with key “JAKARTA,GO_PAY,COMPLETE”, then the output will be:
+“JAKARTA,GO_PAY,COMPLETE,5”
 
 7 -	Write to csv file
 ---------------------
@@ -70,6 +71,7 @@ Since in this test I write to files using TextIO, the input for this PTransform 
 
 -----------------------
 
+
 The source code of dummy application to apply this pipeline is also can be found along with this file. The application was made using Java 8, with Apache beam 2.4.0 as the pipeline API and Direct-Runner as the runner. I also created unit testing for the transformation classes using JUnit.
 
 The reason I am using Apache beam instead of other pipeline API is because as I researched, Apache Beam supports **multiple runner backends** and provides a higher portability and functionality. For example, I am able to apply GroupByKey transform into my pipeline using Beam model, but not in Spark (since the mentioned transform is not fully supported). 
@@ -78,3 +80,7 @@ The reason I am using Apache beam instead of other pipeline API is because as I 
 - The final state in this test is CSV files for every windows created. I would prefer to load those unbounded data into Google BigQuery, where it can be analyzed effectively to provide business intelligence. 
 - The current sliding window configuration needs to be considered further, especially considering the data latency and quality. 
 
+-----------------------
+
+*Regards,*<br/>
+*Arinda*
