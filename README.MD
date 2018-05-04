@@ -79,6 +79,7 @@ The reason I am using Apache beam instead of other pipeline API is because as I 
 **However, there are limitations in this project.**
 - The final state in this test is CSV files for every windows created. I would prefer to load those unbounded data into Google BigQuery, where it can be analyzed effectively to provide business intelligence. 
 - The current sliding window configuration needs to be considered further, especially considering the data latency and quality. 
+- The performance of this application also needs to be considered further.
 
 -----------------------
 
